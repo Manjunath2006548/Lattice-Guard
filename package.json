@@ -1,0 +1,27 @@
+{
+  "name": "lattice-guard-web-application",
+  "version": "2.0.0",
+  "description": "Lattice-Guard: A Lightweight, Fault-Tolerant Hardware Security Monitoring Architecture for Secure VLSI Systems",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "pdf": "node generate_pdf.js"
+  },
+  "keywords": [
+    "vlsi",
+    "hardware-security",
+    "hardware-trojan",
+    "dual-core",
+    "watchdog",
+    "systemverilog-assertions",
+    "sva",
+    "symbiyosys",
+    "arduino",
+    "esp32",
+    "raspberry-pi",
+    "fpga"
+  ],
+  "author": "Antigravity Research Team",
+  "license": "MIT",
+  "dependencies": {}
+}
