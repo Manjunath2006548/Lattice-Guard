@@ -393,7 +393,7 @@
         </div>
 
         <div class="board-select-grid">
-          <div class="board-card active" onclick="selectBoard('arduino', 'Arduino Uno / Mega (ATmega328P)', 'STK500 Bootloader', 115200)">
+          <div class="board-card active" onclick="selectBoard('arduino', 'Arduino Uno / Mega (ATmega328P)', 'STK500 Bootloader', 9600)">
             <div class="board-icon"><i class="fa-solid fa-microchip"></i></div>
             <div class="board-name">Arduino Uno / Mega</div>
             <div class="board-chip">ATmega328P / STK500</div>
@@ -794,7 +794,7 @@ void loop() {
         <div style="background: rgba(0, 255, 136, 0.08); border: 1px solid var(--safe-green); border-radius: 14px; padding: 18px;">
           <h4 style="color: var(--safe-green); font-size: 15px; font-weight: 700; margin-bottom: 6px;"><i class="fa-solid fa-bolt"></i> Option B: Instant Simulated Physical Board Stream</h4>
           <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5;">
-            Don't have a hardware board plugged in right now? Click below to instantly enable <strong>Physical Board Mode (COM3 @ 115200 Baud)</strong> to test physical hardware telemetry & packet verification features immediately!
+            Don't have a hardware board plugged in right now? Click below to instantly enable <strong>Physical Board Mode (COM3 @ 9600 Baud)</strong> to test physical hardware telemetry & packet verification features immediately!
           </p>
           <button class="btn-hero clear-trojan" style="width: 100%; justify-content: center; font-size: 13px;" onclick="closeUsbConnectWizard(); enableSimulatedPhysicalUsbBoard();">
             <i class="fa-solid fa-play"></i> ⚡ ENABLE SIMULATED PHYSICAL USB BOARD MODE
@@ -871,7 +871,7 @@ void loop() {
     let sirenGain = null;
     let audioEnabled = false;
 
-    let currentBoard = { id: 'arduino', name: 'Arduino Uno / Mega (ATmega328P)', protocol: 'STK500 Bootloader', baud: 115200 };
+    let currentBoard = { id: 'arduino', name: 'Arduino Uno / Mega (ATmega328P)', protocol: 'STK500 Bootloader', baud: 9600 };
     let testResults = { bitflip: false, powerglitch: false, delaytrap: false, stickybit: false, sidechannel: false, memoryfault: false, clockskew: false, busoverflow: false, custompayload: false };
 
     let currentSignalType = 'sine';
@@ -1465,7 +1465,7 @@ void loop() {
         alert('🟢 100% HARDWARE FLASH SUCCESS on ' + result.port + '!\n\n' +
           'NEXT STEP — VIEW THE WAVEFORM IN ARDUINO IDE:\n' +
           '1. Open Arduino IDE → Tools → Serial Plotter.\n' +
-          '2. Set the baud rate to 115200.\n' +
+          '2. Set the baud rate to 9600.\n' +
           '3. You will see the live Y_Master, Y_Shadow, Delta & Alarm waveforms streaming from your board.\n' +
           '   (Clean firmware = stable Delta ≈ 0. Trojan firmware = Delta jumps & Alarm trips.)');
       } else {

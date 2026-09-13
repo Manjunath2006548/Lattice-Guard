@@ -43,21 +43,28 @@ function scanConnectedUsbPorts(callback) {
   const script = `
 $ErrorActionPreference = 'SilentlyContinue';
 $ports = @();
-$regProps = @(Get-ItemProperty 'HKLM:\\HARDWARE\\DEVICEMAP\\SERIALCOMM' -ErrorAction SilentlyContinue).PSObject.Properties | Where-Object { $_.Name -notlike 'PS*' };
-foreach ($p in @($regProps | ForEach-Object { $_.Value })) {
-  if ($p -match '^COM\\d+$') { $ports += [PSCustomObject]@{ port = $p.ToUpper(); name = ('Serial Device (' + $p + ')') } }
-}
 $pnp = @(Get-PnpDevice -Class Ports -ErrorAction SilentlyContinue);
 foreach ($d in ($pnp | Where-Object { $_.Status -eq 'OK' })) {
-  $m = [regex]::Match($d.FriendlyName, '\\(COM\\d+\\)');
-  if ($m.Success) {
-    $pp = $m.Groups[1].Value.ToUpper();
+  $mt = [regex]::Match($d.FriendlyName, 'COM\\d+');
+  if ($mt.Success) {
+    $pp = $mt.Value.ToUpper();
     if (-not ($ports.port -contains $pp)) { $ports += [PSCustomObject]@{ port = $pp; name = $d.FriendlyName } }
   }
 }
+$key = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('HARDWARE\\DEVICEMAP\\SERIALCOMM');
+if ($key) {
+  foreach ($n in @($key.GetValueNames())) {
+    $v = $key.GetValue($n);
+    if ($v -is [string] -and $v -match '^COM\\d+$') {
+      $vv = $v.ToUpper();
+      if (-not ($ports.port -contains $vv)) { $ports += [PSCustomObject]@{ port = $vv; name = ('Serial Device (' + $v + ')') } }
+    }
+  }
+  $key.Close();
+}
 $drivers = @($pnp | ForEach-Object {
-  $m = [regex]::Match($_.FriendlyName, '\\(COM\\d+\\)');
-  [PSCustomObject]@{ friendlyName = $_.FriendlyName; status = $_.Status; present = $_.Present; problem = $_.Problem; port = $(if ($m.Success) { $m.Groups[1].Value.ToUpper() } else { '' }) }
+  $mt = [regex]::Match($_.FriendlyName, 'COM\\d+');
+  [PSCustomObject]@{ friendlyName = $_.FriendlyName; status = $_.Status; present = $_.Present; problem = $_.Problem; port = $(if ($mt.Success) { $mt.Value.ToUpper() } else { '' }) }
 });
 ConvertTo-Json -Compress -InputObject @{ ports = @($ports | Sort-Object port); drivers = $drivers } -Depth 4
   `.trim();
@@ -68,9 +75,10 @@ ConvertTo-Json -Compress -InputObject @{ ports = @($ports | Sort-Object port); d
     }
     try {
       const parsed = JSON.parse(stdout.trim());
+      const toArr = (x) => Array.isArray(x) ? x : (x ? [x] : []);
       callback({
-        ports: Array.isArray(parsed.ports) ? parsed.ports.filter(p => p && p.port) : [],
-        drivers: Array.isArray(parsed.drivers) ? parsed.drivers : []
+        ports: toArr(parsed.ports).filter(p => p && p.port),
+        drivers: toArr(parsed.drivers)
       });
     } catch (e) {
       callback({ ports: [], drivers: [] });
