@@ -382,10 +382,22 @@
     .cert-sig-stamp { font-size: 24px; opacity: 0.9; }
     .cert-actions { display: flex; gap: 10px; margin-top: 14px; }
     @media print {
-      body * { visibility: hidden; }
+      @page { size: auto; margin: 10mm; }
+      html, body { height: auto !important; overflow: visible !important; }
+      body > *:not(#cert-modal) { display: none !important; } /* collapse the 3 app pages so ONLY the cert prints */
       #cert-modal, #cert-modal * { visibility: visible; }
-      #cert-modal { position: absolute; inset: 0; display: flex; padding: 14mm; background: #fff; }
-      #cert-modal .close-btn { display: none; }
+      #cert-modal {
+        position: static !important;
+        display: flex !important;
+        justify-content: center;
+        padding: 4mm;
+        background: #fff;
+        overflow: visible;
+        max-height: none !important;
+      }
+      #cert-modal .close-btn,
+      #cert-modal button,
+      #cert-modal .cert-actions { display: none !important; } /* no action buttons on the printed certificate */
       #cert-modal .modal-box { box-shadow: none; border: none; max-width: none; }
       .cert-sheet.unlocked { background: #fff; color: #111; border-color: #d4af37; box-shadow: none; }
       .cert-sheet.unlocked::before { border-color: #d4af37; }
@@ -926,6 +938,11 @@ void loop() {
           • <strong>Port Lock:</strong> If connection fails with "Failed to open serial port", close Arduino IDE / PuTTY / Cura.
         </div>
 
+        <!-- BACK / GO BACK TO APP -->
+        <button class="nav-btn" style="width: 100%; justify-content: center; border-color: var(--primary-cyan); color: var(--primary-cyan);" onclick="closeUsbConnectWizard()">
+          <i class="fa-solid fa-arrow-left"></i> BACK
+        </button>
+
       </div>
     </div>
   </div>
@@ -943,6 +960,10 @@ void loop() {
       <div id="cert-status-content">
         <!-- Content dynamically injected via JavaScript -->
       </div>
+
+      <button class="nav-btn" id="cert-back-btn" style="width: 100%; justify-content: center; margin-top: 14px; border-color: var(--primary-cyan); color: var(--primary-cyan);" onclick="closeCertificateModal()">
+        <i class="fa-solid fa-arrow-left"></i> BACK
+      </button>
     </div>
   </div>
 
