@@ -1,27 +1,29 @@
 {
-  "name": "lattice-guard-web-application",
+  "name": "lattice-guard-silicon-security",
   "version": "2.0.0",
-  "description": "Lattice-Guard: A Lightweight, Fault-Tolerant Hardware Security Monitoring Architecture for Secure VLSI Systems",
+  "description": "Lattice-Guard: A Sub-Nanosecond Asymmetric Dual-Core Architecture for Multi-Vector Hardware Trojan Isolation with Low Area Overhead",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "pdf": "node generate_pdf.js"
+    "build:pdf": "node build_6page_pdf.js"
   },
   "keywords": [
-    "vlsi",
     "hardware-security",
     "hardware-trojan",
     "dual-core",
-    "watchdog",
+    "fpga",
+    "artix-7",
+    "vivado",
     "systemverilog-assertions",
     "sva",
     "symbiyosys",
-    "arduino",
-    "esp32",
-    "raspberry-pi",
-    "fpga"
+    "webserial",
+    "webusb",
+    "ieee-paper"
   ],
-  "author": "Antigravity Research Team",
+  "author": "Lattice-Guard Core Architecture Laboratory",
   "license": "MIT",
-  "dependencies": {}
+  "dependencies": {
+    "puppeteer": "^24.1.0"
+  }
 }
