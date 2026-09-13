@@ -34,27 +34,46 @@ function getLocalIpAddress() {
   return '127.0.0.1';
 }
 
-// Function to scan active connected USB COM ports on Windows
+// Function to scan live USB COM ports on Windows.
+// Uses the OS registry (DEVICEMAP\SERIALCOMM) as the source of truth for which
+// COM ports actually exist, augments them with PnP friendly names, and also
+// returns a driver-health dashboard so the UI can tell the user exactly why a
+// board is NOT visible (e.g. driver not loaded / device unplugged / phantom node).
 function scanConnectedUsbPorts(callback) {
-  const psCmd = `powershell -Command "Get-PnpDevice -Class Ports | Where-Object { $_.Present -eq $true } | Select-Object Name, InstanceId | ConvertTo-Json"`;
-  exec(psCmd, (err, stdout, stderr) => {
+  const script = `
+$ErrorActionPreference = 'SilentlyContinue';
+$ports = @();
+$regProps = @(Get-ItemProperty 'HKLM:\\HARDWARE\\DEVICEMAP\\SERIALCOMM' -ErrorAction SilentlyContinue).PSObject.Properties | Where-Object { $_.Name -notlike 'PS*' };
+foreach ($p in @($regProps | ForEach-Object { $_.Value })) {
+  if ($p -match '^COM\\d+$') { $ports += [PSCustomObject]@{ port = $p.ToUpper(); name = ('Serial Device (' + $p + ')') } }
+}
+$pnp = @(Get-PnpDevice -Class Ports -ErrorAction SilentlyContinue);
+foreach ($d in ($pnp | Where-Object { $_.Status -eq 'OK' })) {
+  $m = [regex]::Match($d.FriendlyName, '\\(COM\\d+\\)');
+  if ($m.Success) {
+    $pp = $m.Groups[1].Value.ToUpper();
+    if (-not ($ports.port -contains $pp)) { $ports += [PSCustomObject]@{ port = $pp; name = $d.FriendlyName } }
+  }
+}
+$drivers = @($pnp | ForEach-Object {
+  $m = [regex]::Match($_.FriendlyName, '\\(COM\\d+\\)');
+  [PSCustomObject]@{ friendlyName = $_.FriendlyName; status = $_.Status; present = $_.Present; problem = $_.Problem; port = $(if ($m.Success) { $m.Groups[1].Value.ToUpper() } else { '' }) }
+});
+ConvertTo-Json -Compress -InputObject @{ ports = @($ports | Sort-Object port); drivers = $drivers } -Depth 4
+  `.trim();
+  const encoded = Buffer.from(script, 'utf16le').toString('base64');
+  exec(`powershell -NoProfile -EncodedCommand ${encoded}`, (err, stdout, stderr) => {
     if (err || !stdout.trim()) {
-      return callback([]);
+      return callback({ ports: [], drivers: [] });
     }
     try {
-      let data = JSON.parse(stdout);
-      if (!Array.isArray(data)) data = [data];
-      const ports = data.map(d => {
-        const match = d.Name.match(/\((COM\d+)\)/i);
-        return {
-          name: d.Name,
-          port: match ? match[1].toUpperCase() : null,
-          instanceId: d.InstanceId
-        };
-      }).filter(p => p.port !== null);
-      callback(ports);
-    } catch(e) {
-      callback([]);
+      const parsed = JSON.parse(stdout.trim());
+      callback({
+        ports: Array.isArray(parsed.ports) ? parsed.ports.filter(p => p && p.port) : [],
+        drivers: Array.isArray(parsed.drivers) ? parsed.drivers : []
+      });
+    } catch (e) {
+      callback({ ports: [], drivers: [] });
     }
   });
 }
@@ -62,9 +81,9 @@ function scanConnectedUsbPorts(callback) {
 const server = http.createServer((req, res) => {
   // API: Scan active connected USB COM ports
   if (req.method === 'GET' && req.url === '/api/scan-ports') {
-    scanConnectedUsbPorts(ports => {
+    scanConnectedUsbPorts(result => {
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, ports }));
+      res.end(JSON.stringify({ success: true, ports: result.ports, drivers: result.drivers }));
     });
     return;
   }
@@ -144,15 +163,32 @@ const server = http.createServer((req, res) => {
         if (comPort && comPort !== 'AUTO') {
           doFlash(comPort);
         } else {
-          scanConnectedUsbPorts(ports => {
+          scanConnectedUsbPorts(result => {
+            const ports = result.ports || [];
             if (ports.length === 0) {
+              let diagHint = '';
+              const weird = (result.drivers || []).filter(d => d.status !== 'OK');
+              if (weird.length > 0) {
+                diagHint = '\n\n🧾 WINDOWS PORT DRIVER DIAGNOSTICS (board was found, but driver is NOT active):\n' +
+                  weird.map(d => `  • ${d.friendlyName} → Status=${d.status} (Problem: ${d.problem})\n     Fix: replug the board, use a DATA cable, and reinstall the USB serial driver.`).join('\n');
+              }
               res.writeHead(500, { 'Content-Type': 'application/json' });
               return res.end(JSON.stringify({
                 success: false,
-                error: `🚨 NO PHYSICAL ARDUINO BOARD DETECTED ON USB PORT!\n\nWindows PnP scanner found 0 active connected USB serial ports.\n\n💡 FIX INSTRUCTIONS:\n1. Plug your Arduino board into your laptop using a DATA USB cable.\n2. Verify that the power LED on your Arduino board lights up.\n3. If using an Arduino clone board (CH340), install CH340 USB serial drivers for Windows.`
+                error: `🚨 NO ACTIVE ARDUINO BOARD DETECTED ON USB PORT!\n\nWindows registered 0 live COM ports.${diagHint}\n\n💡 FIX INSTRUCTIONS:\n1. Plug your Arduino board into your laptop using a DATA USB cable.\n2. Verify that the power LED on your Arduino board lights up.\n3. Wait for Windows to install the serial driver, then close & reopen the Arduino IDE.\n4. If using an Arduino clone board (CH340), install the CH340 USB serial driver for Windows.`
               }));
             }
-            doFlash(ports[0].port);
+            if (ports.length === 1) {
+              return doFlash(ports[0].port);
+            }
+            const options = ports.map(p => `${p.port} (${p.name})`).join(' or ');
+            res.writeHead(409, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({
+              success: false,
+              multiple: true,
+              ports: ports.map(p => p.port),
+              error: `Multiple boards detected: ${options}. Please specify a COM port in the request (e.g. COM3).`
+            }));
           });
         }
       } catch (err) {
