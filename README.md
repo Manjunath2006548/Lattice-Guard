@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![FPGA Target](https://img.shields.io/badge/FPGA-AMD%20Xilinx%20Artix--7-orange.svg)]()
 [![Verification](https://img.shields.io/badge/Verification-SystemVerilog%20SVA-teal.svg)]()
-[![Paper](https://img.shields.io/badge/IEEE-6--Page%20Publication-blue.svg)](#citation--reference)
+
 
 > **Lattice-Guard** is a sub-nanosecond asymmetric dual-core hardware monitoring architecture designed to detect and isolate multi-vector Hardware Trojans (HTs) with minimal silicon area overhead. By pairing a 16-bit high-precision Master Core with an 8-bit quantized approximation Shadow Core, Lattice-Guard achieves real-time anomaly detection with a **41.2% reduction in Look-Up Table (LUT) area utilization** and a **43.1% reduction in dynamic power dissipation** compared to conventional Dual Modular Redundancy (DMR).
 
@@ -90,25 +90,7 @@ npm start
 
 Open your browser and navigate to `http://localhost:3000` to access the live web application platform.
 
-### Building the 6-Page IEEE Research Paper PDF
-```bash
-npm run build:pdf
-```
 
----
-
-## 📜 Citation & Reference
-
-If you use Lattice-Guard in your research or project, please cite our IEEE conference paper:
-
-```bibtex
-@inproceedings{sharma2026latticeguard,
-  title={Lattice-Guard: A Sub-Nanosecond Asymmetric Dual-Core Architecture for Multi-Vector Hardware Trojan Isolation with Low Area Overhead},
-  author={Sharma, Aarav and Verma, Rohan and Rao, Vikramaditya},
-  booktitle={IEEE Transactions / Conference Publication on Hardware Security},
-  pages={1--6},
-  year={2026}
-}
 ```
 
 ---
