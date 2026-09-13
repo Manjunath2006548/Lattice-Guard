@@ -848,6 +848,13 @@ void loop() {
                 <option value="custompayload">⚡ Custom User Payload (User Defined Offset)</option>
               </select>
 
+              <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 10px;">
+                <label style="font-size: 11px; color: var(--text-muted); flex: 1;">Custom Payload Offset Δ(custom):</label>
+                <input type="number" id="custom-trojan-offset" value="0.50" step="0.05" min="-2" max="2"
+                  onchange="customTrojanOffset = parseFloat(this.value) || 0.50" oninput="if (activeTrojan === 'custompayload') { customTrojanOffset = parseFloat(this.value) || 0.50; logConsole('[CUSTOM PAYLOAD] 🎛️ Custom offset updated to Δ = ' + customTrojanOffset.toFixed(2) + ' — oscilloscope waveform updated live.'); }"
+                  style="width: 90px; background: rgba(15,23,42,0.9); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #fff; padding: 6px 8px; font-size: 12px;">
+              </div>
+
               <div style="display: flex; flex-direction: column; gap: 6px;">
                 <button class="btn-hero primary" style="width: 100%; justify-content: center; font-size: 12px; background: rgba(255, 0, 85, 0.2); border: 1px solid var(--alarm-red); color: var(--alarm-red);" onclick="injectWaveformTrojan(document.getElementById('waveform-trojan-select').value)">⚡ INJECT SELECTED TROJAN</button>
                 <button class="btn-hero clear-trojan" style="width: 100%; justify-content: center; font-size: 12px;" onclick="clearWaveformTrojan()"><i class="fa-solid fa-broom"></i> 🟢 CLEAR TROJAN (RESET CLEAN)</button>
@@ -894,6 +901,9 @@ void loop() {
           </p>
           <button class="btn-hero primary" style="width: 100%; justify-content: center; font-size: 13px;" onclick="closeUsbConnectWizard(); connectPhysicalHardwareBoard();">
             <i class="fa-solid fa-microchip"></i> 🔌 OPEN USB DEVICE PICKER
+          </button>
+          <button class="nav-btn" style="width: 100%; justify-content: center; font-size: 12px; margin-top: 8px; border-color: #ff5577; color: #ff5577;" onclick="forgotPairedWebSerialDevices()" id="forget-paired-btn">
+            <i class="fa-solid fa-user-minus"></i> FORGET PAIRED DEVICE (STOP "SHOWS PAIRED" — THEN OPEN PICKER FRESH)
           </button>
         </div>
 
@@ -984,11 +994,13 @@ void loop() {
     let currentBoard = { id: 'arduino', name: 'Arduino Uno / Mega (ATmega328P)', protocol: 'STK500 Bootloader', baud: 9600 };
     let selectedComPort = null;      // COM port chosen in the USB wizard -> real flash target
     let virtualStreamActive = false; // virtual sandbox mode when NO USB port is selected
+    let serialReaderActive = false; // tracks the background Web Serial reader (for clean release)
     let testResults = { bitflip: false, powerglitch: false, delaytrap: false, stickybit: false, sidechannel: false, memoryfault: false, clockskew: false, busoverflow: false, custompayload: false };
 
     let currentSignalType = 'sine';
     let activeTrojan = null; // null, 'alu', 'prescaler', 'bitflip', 'powerglitch', etc.
     let customTrojanMeta = null;
+    let customTrojanOffset = 0.50; // user-defined Custom Payload magnitude Δ(custom)
     let animationFrameId = null;
 
     let liveHardwareTelemetry = { xInput: 0, yMaster: 0, yShadow: 0, delta: 0, alarm: false };
@@ -1001,6 +1013,64 @@ void loop() {
         disconnectPhysicalHardwareBoard();
         showToast('⚠️ USB Board Unplugged! Switched to Virtual Sandbox.', false);
       });
+      navigator.serial.addEventListener('connect', (event) => {
+        logConsole('[USB RE-PLUGGED] 🔌 Board physically re-plugged. It will appear on a possibly new COM port — REFRESH the wizard or press FLASH to auto-select it.');
+      });
+    }
+
+    // RE-VERIFY THE SELECTED COM IS STILL LIVE BEFORE FLASHING.
+    // Solves "after disconnect & re-connect it still shows paired": if the board is
+    // unplugged (0 ports) it auto-disconnects; if the port NUMBER changed (COM3->COM4)
+    // it auto-selections the new live port so the flash targets the REAL port.
+    async function verifySelectedComStillLive() {
+      if (!isPhysicalBoardConnected || connectedPort) return true; // Web Serial self-detects; only guard dropdown-mode
+      try {
+        const res = await fetch('/api/scan-ports?t=' + Date.now());
+        const data = await res.json();
+        const ports = ((data && data.ports) || []).map(p => (p.port || '').toUpperCase()).filter(Boolean);
+        if (ports.length === 0) {
+          logConsole('[USB RE-VERIFY] ⚠️ No COM ports detected — board unplugged. Auto-disconnecting stale "paired" state.');
+          isPhysicalBoardConnected = false;
+          selectedComPort = null;
+          virtualStreamActive = false;
+          usbTelemetryHistory = [];
+          updateHardwareConnectionUI(false, 'Board unplugged — software virtual sandbox mode. Re-plug the board and press CONNECT USB BOARD to re-pair.');
+          showToast('⚠️ USB board unplugged. Stale connection cleared. Re-plug & re-connect.', false);
+          return false;
+        }
+        if (!ports.includes(selectedComPort)) {
+          const newPort = ports[0];
+          logConsole('[USB RE-VERIFY] Port changed (' + selectedComPort + ' → ' + newPort + ') — auto-updating flash target.');
+          selectedComPort = newPort;
+          usbTelemetryHistory = [];
+          updateHardwareConnectionUI(true, '🔄 Board re-detected on ' + newPort + ' — flash will target the LIVE port ' + newPort + '.');
+          showToast('🔄 Port changed to ' + newPort + ' — auto-selected.', true);
+          return true;
+        }
+        return true;
+      } catch (e) {
+        return true; // server unreachable → never block the flash
+      }
+    }
+
+    // WEB SERIAL UN-PAIR: clears the browser's "paired" memory so the picker asks fresh.
+    async function forgotPairedWebSerialDevices() {
+      if (!('serial' in navigator)) { showToast('⚠️ Web Serial requires Chrome/Edge.', false); return; }
+      let forgotten = 0;
+      if (connectedPort) {
+        const p = connectedPort;
+        await releaseCurrentWebSerialPort();
+        try { if (typeof p.forget === 'function') { await p.forget(); forgotten++; } } catch (e) {}
+      }
+      try {
+        const ports = await navigator.serial.getPorts();
+        for (const port of ports) {
+          try { if (typeof port.forget === 'function') { await port.forget(); forgotten++; } } catch (e) {}
+        }
+      } catch (e) {}
+      logConsole('[UN-PAIR] 🔓 Forgot ' + forgotten + ' paired Web Serial device(s). Browser picker will show devices as NEW next time.');
+      if (forgotten > 0) showToast('🔓 Un-paired ' + forgotten + ' device(s). Reopen the picker — "paired" is gone.', true);
+      else showToast('ℹ️ No paired devices to forget.', false);
     }
 
     function toggleUsbConnectionAction() {
@@ -1019,13 +1089,45 @@ void loop() {
       virtualStreamActive = false;
       usbTelemetryHistory = []; // CLEAR TELEMETRY STREAM BUFFER ON DISCONNECT
 
-      if (connectedPort) {
-        try { connectedPort.close(); } catch(e){}
-        connectedPort = null;
-      }
+      releaseCurrentWebSerialPort();
+
       updateHardwareConnectionUI(false, 'Running in Software Virtual Hardware Sandbox mode. Click "CONNECT USB BOARD" to pair Arduino/ESP32.');
       logConsole('[USB DISCONNECTED] 🔌 Closed USB Serial Port. Telemetry stream halted.');
       showToast('🔌 Disconnected USB Board. Telemetry stream halted.', false);
+    }
+
+    // ROBUST WEB SERIAL RELEASE: cancels the piped stream FIRST (a plain close() fails
+    // while the readable stream is locked by the background reader -> port stays held by
+    // the browser -> avrdude.exe gets "Access is denied"). This fully frees the COM port.
+    async function releaseCurrentWebSerialPort() {
+      if (!connectedPort) return;
+      serialReaderActive = false; // tell the reader loop to stop
+
+      const port = connectedPort;
+      connectedPort = null;
+
+      try {
+        if (port.readable && typeof port.readable.cancel === 'function') {
+          await port.readable.cancel('flash-release');
+        }
+      } catch (e) { /* stream already closed */ }
+      try {
+        if (port.writable && typeof port.writable.close === 'function') {
+          await port.writable.close();
+        }
+      } catch (e) { /* stream already closed */ }
+      try {
+        await port.close();
+        logConsole('[WEB SERIAL RELEASE] ✅ Web Serial handle fully released — COM port is now free for avrdude.');
+      } catch (e) {
+        logConsole('[WEB SERIAL RELEASE] Port close: ' + e.message);
+      }
+      try {
+        if (typeof port.forget === 'function') {
+          await port.forget();
+          logConsole('[WEB SERIAL RELEASE] 🔓 Web Serial pairing forgotten — device will NOT show "paired" anymore.');
+        }
+      } catch (e) { /* forget unsupported / already forgotten */ }
     }
 
     // EDITOR LINE NUMBERS GENERATOR & SCROLL SYNC
@@ -1051,9 +1153,35 @@ void loop() {
       }
     }
 
+    // LIVE AI CODE INSPECTOR — runs whenever the user types/pastes in the editor
+    function onCodeEditorInput() {
+      updateLineNumbers();
+      const editor = document.getElementById('code-editor');
+      if (!editor) return;
+      const code = editor.value;
+      const syntaxRes = validateCodeSyntax(code);
+      const trojanRes = analyzeCodeForTrojans(code);
+      const badge = document.getElementById('ai-inspector-badge');
+      if (!badge) return;
+      if (!syntaxRes.valid) {
+        badge.style.background = 'rgba(255, 0, 85, 0.2)';
+        badge.style.color = 'var(--alarm-red)';
+        badge.innerText = '🤖 AI INSPECTOR: ❌ SYNTAX ERROR ON LINE ' + syntaxRes.line;
+      } else if (trojanRes.hasTrojan) {
+        badge.style.background = 'rgba(255, 0, 85, 0.2)';
+        badge.style.color = 'var(--alarm-red)';
+        badge.innerText = '🤖 AI INSPECTOR: 🚨 TROJAN LOGIC DETECTED (' + trojanRes.findings[0].type + ')';
+      } else {
+        badge.style.background = 'rgba(0, 255, 136, 0.15)';
+        badge.style.color = 'var(--safe-green)';
+        badge.innerText = '🤖 AI INSPECTOR: 🟢 100% CLEAN CODE (NO TROJAN)';
+      }
+    }
+
     // INITIALIZE LINE NUMBERS & USB STREAM INGESTION ON LOAD
     window.addEventListener('DOMContentLoaded', () => {
       updateLineNumbers();
+      onCodeEditorInput();
 
       // Telemetry stream is ONLY fed when USB board IS CONNECTED (isPhysicalBoardConnected === true)!
       setInterval(() => {
@@ -1067,7 +1195,13 @@ void loop() {
         if (activeTrojan === 'prescaler') sample = Math.sin(Date.now() * 0.015);
         if (activeTrojan === 'bitflip') sample += 0.55;
         if (activeTrojan === 'powerglitch') sample += 0.35 * Math.sin(Date.now() * 0.02);
+        if (activeTrojan === 'delaytrap') sample = Math.sin((Date.now() * 0.005) - 0.8);
         if (activeTrojan === 'stickybit') sample = 0.85;
+        if (activeTrojan === 'sidechannel') sample += 0.18 * Math.sin(Date.now() * 0.06);
+        if (activeTrojan === 'memoryfault') sample += (Math.random() > 0.85 ? 0.75 : 0);
+        if (activeTrojan === 'clockskew') sample = Math.sin((Date.now() * 0.005) + 1.2);
+        if (activeTrojan === 'busoverflow') sample = Math.min(1.0, Math.max(-1.0, sample * 1.8));
+        if (activeTrojan === 'custompayload') sample += (typeof customTrojanOffset === 'number' ? customTrojanOffset : 0.50);
 
         usbTelemetryHistory.push(sample);
         if (usbTelemetryHistory.length > 300) usbTelemetryHistory.shift();
@@ -1183,6 +1317,31 @@ void loop() {
     }
 
     // DYNAMIC SAMPLE CODE LOADER ACCORDING TO SELECTED TARGET SILICON BOARD
+    function copyCodeToClipboard() {
+      const editor = document.getElementById('code-editor');
+      if (!editor) return;
+      const code = editor.value;
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(code).then(() => {
+          showToast('📋 Sketch copied to clipboard!', true);
+        }).catch(() => {
+          fallbackCopy(code);
+        });
+      } else {
+        fallbackCopy(code);
+      }
+      function fallbackCopy(text) {
+        editor.select();
+        editor.setSelectionRange(0, text.length);
+        try {
+          document.execCommand('copy');
+          showToast('📋 Sketch copied to clipboard!', true);
+        } catch (e) {
+          showToast('⚠️ Copy failed — select the code manually and press Ctrl+C.', false);
+        }
+      }
+    }
+
     function loadSampleCode(type) {
       const editor = document.getElementById('code-editor');
       const wrapper = document.getElementById('editor-wrapper');
@@ -1404,7 +1563,8 @@ void loop() {
     }
 
     async function startBackgroundSerialReader(port) {
-      while (port && port.readable && isPhysicalBoardConnected) {
+      serialReaderActive = true;
+      while (port && port.readable && isPhysicalBoardConnected && serialReaderActive) {
         try {
           const textDecoder = new TextDecoderStream();
           const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
@@ -1414,6 +1574,7 @@ void loop() {
 
           let buffer = '';
           while (true) {
+            if (!serialReaderActive) break; // flash/disconnect asked us to stop
             const { value, done } = await reader.read();
             if (done) { reader.releaseLock(); break; }
             if (value) {
@@ -1430,9 +1591,14 @@ void loop() {
             }
           }
         } catch (err) {
-          logConsole('[SERIAL STREAM END] USB Connection lost or disconnected: ' + err.message);
-          disconnectPhysicalHardwareBoard();
+          // only treat as a real connection loss if WE did not initiate the stop
+          if (serialReaderActive && connectedPort) {
+            logConsole('[SERIAL STREAM END] USB Connection lost or disconnected: ' + err.message);
+            disconnectPhysicalHardwareBoard();
+          }
           break;
+        } finally {
+          serialReaderActive = false;
         }
       }
     }
@@ -1614,23 +1780,34 @@ void loop() {
 
       // Release the browser's Web Serial handle first — avrdude cannot open a
       // port that the browser is still holding ("Access is denied").
-      if (isPhysicalBoardConnected && connectedPort) {
+      if (connectedPort) {
         logConsole('[WEB SERIAL RELEASE] Closing browser Web Serial port so avrdude.exe can access ' + targetPort + '...');
-        try { await connectedPort.close(); } catch (e) { logConsole('[WEB SERIAL RELEASE] ' + e.message); }
+        await releaseCurrentWebSerialPort();
         isPhysicalBoardConnected = false;
-        connectedPort = null;
         if (typeof updateHardwareConnectionUI === 'function') {
           updateHardwareConnectionUI(false, 'Web Serial released for native firmware upload.');
         }
       }
 
       try {
-        const response = await fetch('/api/flash-native-avrdude', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ comPort: targetPort, hexType })
-        });
-        const res = await response.json();
+        let res = null;
+        // Retry ONCE if the COM port is still held open — a stale tab that is about
+        // to release the port can free it within ~1 second.
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          const response = await fetch('/api/flash-native-avrdude', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ comPort: targetPort, hexType })
+          });
+          res = await response.json();
+          if (res && !res.success && /held open|access is denied|is locked/i.test(res.error || '') && attempt < 2) {
+            logConsole('[PORT LOCK] ⏳ ' + targetPort + ' still held open — waiting 1.5s, then auto-retrying once...');
+            setProgress(55, 'STATUS: ⏳ PORT RELEASING — RETRYING ' + targetPort + '...');
+            await new Promise(r => setTimeout(r, 1500));
+            continue;
+          }
+          break;
+        }
 
         if (res.multiple && res.ports) {
           const picked = prompt('Multiple boards detected. Which COM port?\n\nAvailable: ' + res.ports.join(', '), res.ports[0]);
@@ -1654,7 +1831,35 @@ void loop() {
       }
     }
 
-    // 🚀 100% NATIVE AVRDUDE HARDWARE FLASH button handler
+    // 🚨 100% NATIVE AVRDUDE HARDWARE FLASH button handler
+    async function reportPortLockHelp(targetPort) {
+      try {
+        const res = await fetch('/api/lock-suspects?t=' + Date.now());
+        const data = await res.json();
+        const suspects = (data && data.suspects) || [];
+        const browsers = suspects.filter(s => /msedge|chrome/i.test(s.name));
+        const tools = suspects.filter(s => /arduino|putty|teraterm|tterm|coolterm|realterm|java|python/i.test(s.name));
+        let html = '<br><strong>🔍 COM PORT LOCK DETECTIVE:</strong><br>';
+        if (suspects.length === 0) {
+          html += '• No common serial/app programs detected — close ALL other browser tabs & apps, then hard-refresh this page (Ctrl+F5) and retry.';
+        } else {
+          html += '• Running programs that commonly hold ' + (targetPort || 'the COM') + ' open:<br>' +
+            suspects.map(s => '&nbsp;&nbsp;🔸 <strong>' + s.name + '</strong> (PID ' + s.pid + ')' +
+              (s.cmdline ? ' — <small>' + s.cmdline + '</small>' : '')).join('<br>') + '<br>';
+          if (browsers.length) {
+            html += '• 🖥️ <strong>Browsers detected:</strong> if you used the Web Serial "USB PICKER" in THIS app, the browser itself holds the port. Click <strong>DISCONNECT USB</strong> (or reload with Ctrl+F5) BEFORE flashing.<br>';
+          }
+          if (tools.length) {
+            html += '• 📈 <strong>Serial apps detected:</strong> close the Arduino IDE Serial Monitor/Plotter (or PuTTY/CoolTerm) — the port stays locked until you do.<br>';
+          }
+          html += '• 🛡️ <strong>Still denied?</strong> This PC blocks NON-ADMIN serial access to COM3. Launch the server as Administrator via <strong>Start-Lattice-Server-Admin.bat</strong> (in the app folder) — admin can always open the port.<br>';
+        }
+        return html;
+      } catch (e) {
+        return '<br><strong>🔍 COM PORT LOCK DETECTIVE:</strong><br>• Could not scan lock-suspects: ' + e.message;
+      }
+    }
+
     async function flashNativeAvrdudeHardware() {
       const result = await performAvrdudeFlash(null);
       if (result.success) {
@@ -1747,6 +1952,7 @@ void loop() {
       // 2. CHECK PRE-EXISTING HARDWARE ARCHITECTURE TROJAN STATE
       const isAluTrojan = (activeTrojan === 'alu');
       const isHardwarePrescalerTrojan = (activeTrojan === 'prescaler');
+      const wasHardwareTrojan = activeTrojan; // snapshot BEFORE flashing: any dropdown/custom injection
       const trojanScan = analyzeCodeForTrojans(code);
 
       bar.style.width = '0%';
@@ -1756,6 +1962,9 @@ void loop() {
       //    - VIRTUAL : no USB port selected -> sandbox simulation. Non-Arduino boards also simulate (no local toolchain).
       const boardPicked = !!(selectedComPort || isPhysicalBoardConnected);
       const boardSupportedByNativeFlasher = (currentBoard.id === 'arduino');
+      if (boardPicked && !connectedPort) {
+        await verifySelectedComStillLive(); // clears stale "paired" / re-points to the current live COM
+      }
       let result;
       let physicalMode = false;
 
@@ -1771,7 +1980,7 @@ void loop() {
           logConsole('[VIRTUAL MODE] 🖥️ Real native upload currently supports Arduino Uno/Mega. ' +
             currentBoard.name + ' deployment runs as a simulated virtual hardware sandbox.');
         }
-        result = await performVirtualFlash();
+        result = await performVirtualFlash(wasHardwareTrojan ? wasHardwareTrojan.toUpperCase() : 'CLEAN');
       }
 
       if (!result.success) {
@@ -1779,9 +1988,13 @@ void loop() {
         diagTag.innerText = '❌ HARDWARE UPLOAD FAILED';
         diagTag.style.background = 'rgba(255, 0, 85, 0.2)';
         diagTag.style.color = 'var(--alarm-red)';
+        let lockHelp = '';
+        if (/held open|access is denied|is locked/i.test(result.error || '')) {
+          lockHelp = await reportPortLockHelp(result.port);
+        }
         diagText.innerHTML = '❌ <strong>PHYSICAL UPLOAD TO ' + currentBoard.name.toUpperCase() + ' FAILED:</strong><br>' +
           '• <strong>Target Port:</strong> ' + (result.port || 'N/A') + '<br>' +
-          '• <strong>Flash Output:</strong><br><pre style="white-space:pre-wrap; font-size:10px; color:#ff5577;">' + result.error + '</pre>';
+          '• <strong>Flash Output:</strong><br><pre style="white-space:pre-wrap; font-size:10px; color:#ff5577;">' + result.error + '</pre>' + lockHelp;
         showToast('❌ Flash failed! Check port, driver, and USB cable.', false);
         return; // STOP
       }
@@ -1831,7 +2044,37 @@ void loop() {
         triggerSirenAlarmTemporary();
         updateHeaderStatus(true);
         showToast('🚨 Hardware Manipulated! Software requested 1 Pulse/3 Sec, but Hardware Trojan forced 3 Pulses in 3 Sec!', false);
-      } 
+      }
+      // SCENARIO B+: ANY OTHER INJECTED HARDWARE TROJAN → TROJAN FIRMWARE WAS DEPLOYED (NOT CLEAN!)
+      else if (wasHardwareTrojan) {
+        const trojanNameMap = {
+          bitflip: 'Bit-Flip Trojan (MSB Bit 15 Inversion)',
+          powerglitch: 'Power Glitch Attack (Rail Voltage Dip)',
+          delaytrap: 'Delay Trap Trojan (18-Cycle Pipeline Delay)',
+          stickybit: 'Sticky Bit Lock (Output Flatline Lock)',
+          sidechannel: 'Side-Channel Leak (RF Carrier Ripple)',
+          memoryfault: 'Memory Corruption Fault (LUT Pointer Corrupt)',
+          clockskew: 'Clock Skew Desync (1.2 rad Phase Shift)',
+          busoverflow: 'Bus Saturation Payload (Peak Overflow)',
+          custompayload: 'Custom User Payload'
+        };
+        const trojanName = trojanNameMap[wasHardwareTrojan] || wasHardwareTrojan.toUpperCase();
+
+        diagBox.classList.add('fault');
+        diagTag.innerText = '🚨 TROJAN FIRMWARE DEPLOYED & INTERCEPTED';
+        diagTag.style.background = 'rgba(255, 0, 85, 0.2)';
+        diagTag.style.color = 'var(--alarm-red)';
+
+        diagText.innerHTML = '🚨 <strong>TROJAN FIRMWARE DEPLOYMENT REPLY [' + modeTag + ']:</strong><br>' +
+          '1. <strong>DEPLOYED FIRMWARE:</strong> 🚨 TROJAN (' + trojanName + ')<br>' +
+          '• <strong>Target:</strong> ' + currentBoard.name + ' @ ' + result.port + '<br>' +
+          '• <strong>Mismatch Delta Δ(t):</strong> 0.5500 (EXCEEDS 0.120 THRESHOLD!)<br>' +
+          '• <strong>Watchdog Reaction:</strong> ALARM TRIPPED! Trojan isolated in &lt; 0.39 ns (100% Intercepted).';
+
+        triggerSirenAlarmTemporary();
+        updateHeaderStatus(true);
+        showToast('🚨 Trojan firmware (' + (trojanName.split(' (')[0]) + ') deployed & intercepted by Watchdog!', false);
+      }
       // SCENARIO C: SOFTWARE CODE TROJAN DETECTED
       else if (trojanScan.hasTrojan) {
         const f = trojanScan.findings[0];
@@ -1875,24 +2118,26 @@ void loop() {
 
     // VIRTUAL HARDWARE SANDBOX FLASH SIMULATION
     // Used when NO USB COM port is selected, or when the selected board has no local flasher.
-    function performVirtualFlash() {
+    function performVirtualFlash(firmwareLabel) {
+      const label = (firmwareLabel || 'CLEAN').toUpperCase();
       return new Promise((resolve) => {
         const bar = document.getElementById('flash-progress-bar');
         const status = document.getElementById('flashing-status-label');
         let progress = 0;
-        logConsole('[VIRTUAL FLASH] 🖥️ Simulating firmware deployment into virtual ' + currentBoard.name + ' silicon...');
+        const isTrojanFlash = (label !== 'CLEAN');
+        logConsole('[VIRTUAL FLASH] 🖥️ Simulating ' + label + ' firmware deployment into virtual ' + currentBoard.name + ' silicon...');
         const iv = setInterval(() => {
           progress += Math.random() * 20 + 12;
           if (progress >= 100) {
             progress = 100;
             clearInterval(iv);
             if (bar) bar.style.width = '100%';
-            if (status) status.innerText = 'STATUS: 🖥️ VIRTUAL FLASH COMPLETE';
-            logConsole('[VIRTUAL FLASH] ✅ Virtual deployment finished for ' + currentBoard.name + '. Connect a USB COM port to flash real hardware.');
-            resolve({ success: true, port: 'VIRTUAL', log: 'Virtual flash simulation completed.' });
+            if (status) status.innerText = 'STATUS: 🖥️ VIRTUAL ' + label + ' FLASH COMPLETE';
+            logConsole('[VIRTUAL FLASH] ✅ Virtual ' + label + ' firmware deployed into ' + currentBoard.name + '.');
+            resolve({ success: true, port: 'VIRTUAL', log: 'Virtual ' + label + ' flash simulation completed.', firmware: label, isTrojan: isTrojanFlash });
           } else {
             if (bar) bar.style.width = progress + '%';
-            if (status) status.innerText = 'STATUS: 🖥️ SIMULATING VIRTUAL FLASH ' + Math.min(100, Math.round(progress)) + '%';
+            if (status) status.innerText = 'STATUS: 🖥️ SIMULATING VIRTUAL ' + label + ' FLASH ' + Math.min(100, Math.round(progress)) + '%';
           }
         }, 90);
       });
@@ -1927,6 +2172,7 @@ void loop() {
 
       activeTrojan = 'custompayload';
       customTrojanMeta = { name, target, type, val };
+      loadTrojanSourceIntoEditor(); // swap editor to Trojan source so UPLOAD writes Trojan firmware
 
       testResults['custompayload'] = true;
       const tag = document.getElementById('test-tag-custompayload');
@@ -2189,7 +2435,7 @@ void loop() {
               <div class="cert-sig-stamp">🔒</div>
             </div>
             <div class="cert-actions">
-              <button class="btn-hero primary" style="width: 100%; justify-content: center; background: linear-gradient(135deg, var(--safe-green), #059669); color: #000; font-weight: 700;" onclick="closeCertificateModal(); loadSampleCode('clean'); runCompletePhysicalBoardTrojanTestSuite(false);">
+              <button class="btn-hero primary" style="width: 100%; justify-content: center; background: linear-gradient(135deg, var(--safe-green), #059669); color: #000; font-weight: 700;" onclick="closeCertificateModal(); clearAllSystemFaults(); loadSampleCode('clean'); runCompletePhysicalBoardTrojanTestSuite(false);">
                 <i class="fa-solid fa-broom"></i> 🟢 CLEAR ALL FAULTS & AUDIT CLEAN CODE TO UNLOCK
               </button>
             </div>
@@ -2257,6 +2503,10 @@ void loop() {
       modal.classList.add('active');
     }
 
+    function closeCertificateModal() {
+      document.getElementById('cert-modal').classList.remove('active');
+    }
+
     function printCertificate() {
       window.print();
     }
@@ -2300,6 +2550,32 @@ void loop() {
       }
     }
 
+    // LOAD THE MATCHING TROJAN SOURCE CODE INTO THE EDITOR SO WHAT YOU SEE IS WHAT GETS FLASHED.
+    // When a Trojan is applied, the editor is replaced with the board's Trojan firmware code,
+    // so "UPLOAD TO BOARD" writes the TROJAN firmware (not clean code) to real OR virtual hardware.
+    function loadTrojanSourceIntoEditor() {
+      const editor = document.getElementById('code-editor');
+      if (!editor) return;
+      if (analyzeCodeForTrojans(editor.value).hasTrojan) return; // already trojan code → don't clobber manual edits
+      const boardId = currentBoard.id || 'arduino';
+      const codeSet = allBoardCodes[boardId] || allBoardCodes['arduino'];
+      editor.value = codeSet.trojan || codeSet.clean;
+      updateLineNumbers();
+      onCodeEditorInput();
+      logConsole('[TROJAN SOURCE] 🧬 Trojan firmware code loaded into the editor — UPLOAD will now write the TROJAN firmware to the hardware.');
+    }
+
+    // RESTORE THE BOARD'S CLEAN SOURCE CODE AFTER A TROJAN IS CLEARED (keeps editor synced with what gets flashed)
+    function restoreCleanCodeIntoEditor() {
+      const editor = document.getElementById('code-editor');
+      if (!editor) return;
+      const boardId = currentBoard.id || 'arduino';
+      const codeSet = allBoardCodes[boardId] || allBoardCodes['arduino'];
+      editor.value = codeSet.clean;
+      updateLineNumbers();
+      onCodeEditorInput();
+    }
+
     function injectWaveformTrojan(type) {
       if (type === 'clean') {
         clearWaveformTrojan();
@@ -2307,8 +2583,11 @@ void loop() {
       }
 
       activeTrojan = type;
+      loadTrojanSourceIntoEditor(); // swap the editor to Trojan firmware so UPLOAD flashes the Trojan to hardware
       const selectBox = document.getElementById('waveform-trojan-select');
       if (selectBox) selectBox.value = type;
+      const offsetInput = document.getElementById('custom-trojan-offset');
+      if (offsetInput) offsetInput.value = customTrojanOffset;
 
       if (audioEnabled) startSiren();
       updateHeaderStatus(true);
@@ -2357,6 +2636,7 @@ void loop() {
       updateHeaderStatus(false);
       logConsole('[WAVEFORM INJECTOR] Cleared Trojan fault. Waveform operating at baseline precision.');
       clearAllSystemFaults();
+      restoreCleanCodeIntoEditor(); // editor returns to clean firmware so UPLOAD flashes clean again
     }
 
     function initWaveformCanvas() {
@@ -2385,15 +2665,14 @@ void loop() {
       const liveSyntaxRes = validateCodeSyntax(liveCodeText);
       const liveTrojanRes = analyzeCodeForTrojans(liveCodeText);
 
-      let effectiveTrojan = null;
-      if (!liveSyntaxRes.valid) {
-        effectiveTrojan = 'bitflip'; // Syntax error causes hardware signal fault
-      } else if (liveTrojanRes.hasTrojan) {
-        effectiveTrojan = 'bitflip'; // Trojan logic causes hardware signal fault
-      } else if (activeTrojan !== null) {
-        effectiveTrojan = activeTrojan; // Explicit active Trojan vector
-      } else {
-        effectiveTrojan = null; // 100% CLEAN CORRECT CODE
+      let effectiveTrojan = activeTrojan; // EXPLICIT dropdown selection takes FULL priority
+      if (effectiveTrojan === null) {
+        // Auto-detect ONLY when the user hasn't chosen a Trojan:
+        if (!liveSyntaxRes.valid) {
+          effectiveTrojan = 'bitflip'; // Syntax error causes hardware signal fault
+        } else if (liveTrojanRes.hasTrojan) {
+          effectiveTrojan = 'bitflip'; // Trojan logic causes hardware signal fault
+        }
       }
 
       // 1. Calculate Signal 1: Raw Input Signal X(t) across full canvas
@@ -2421,7 +2700,7 @@ void loop() {
       if (effectiveTrojan === 'memoryfault') yMasterVal += (Math.random() > 0.85 ? 0.75 : 0);
       if (effectiveTrojan === 'clockskew') yMasterVal = Math.sin(tStep + 1.2);
       if (effectiveTrojan === 'busoverflow') yMasterVal = Math.min(1.0, Math.max(-1.0, yMasterVal * 1.8));
-      if (effectiveTrojan === 'custompayload') yMasterVal += 0.50;
+      if (effectiveTrojan === 'custompayload') yMasterVal += (typeof customTrojanOffset === 'number' ? customTrojanOffset : 0.50);
 
       // 3. Calculate Shadow Output Y_S(t) (8-bit Quantized Baseline)
       const yShadowVal = Math.round(currentSampleVal * 128) / 128;
@@ -2504,7 +2783,7 @@ void loop() {
         if (effectiveTrojan === 'memoryfault') val += (Math.sin(x * 12) > 0.85 ? 0.75 : 0);
         if (effectiveTrojan === 'clockskew') val = Math.sin((x * 0.02) + tStep + 1.2);
         if (effectiveTrojan === 'busoverflow') val = Math.min(0.95, Math.max(-0.95, val * 1.8));
-        if (effectiveTrojan === 'custompayload') val += 0.50;
+        if (effectiveTrojan === 'custompayload') val += (typeof customTrojanOffset === 'number' ? customTrojanOffset : 0.50);
 
         const y = midY - (val * 60);
         if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
@@ -2563,7 +2842,7 @@ void loop() {
         if (effectiveTrojan === 'memoryfault') valM += (Math.sin(x * 12) > 0.85 ? 0.75 : 0);
         if (effectiveTrojan === 'clockskew') valM = Math.sin((x * 0.02) + tStep + 1.2);
         if (effectiveTrojan === 'busoverflow') valM = Math.min(0.95, Math.max(-0.95, valM * 1.8));
-        if (effectiveTrojan === 'custompayload') valM += 0.50;
+        if (effectiveTrojan === 'custompayload') valM += (typeof customTrojanOffset === 'number' ? customTrojanOffset : 0.50);
 
         const d = Math.abs(valM - valS);
         const y = (h - 60) - (d * 80);

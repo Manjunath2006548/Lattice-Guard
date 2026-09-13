@@ -115,8 +115,9 @@ try {
 }
 
 const server = http.createServer((req, res) => {
+  const qs = req.url.split('?')[0]; // strip cache-busting query strings before routing
   // API: Scan active connected USB COM ports
-  if (req.method === 'GET' && req.url === '/api/scan-ports') {
+  if (req.method === 'GET' && qs === '/api/scan-ports') {
     scanConnectedUsbPorts(result => {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: true, ports: result.ports, drivers: result.drivers }));
@@ -124,8 +125,33 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // API: List running programs that commonly hold a COM port open
+  if (req.method === 'GET' && qs === '/api/lock-suspects') {
+    const script = `
+$ErrorActionPreference = 'SilentlyContinue';
+$names = 'msedge|msedgewebview2|chrome|arduino|putty|teraterm|ttermpro|coolterm|realterm|java|python';
+$rows = @();
+Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessId -ne 0 -and $_.Name -and ($_.Name -match $names) } | ForEach-Object {
+  $cmd = $_.CommandLine;
+  if ($cmd) { if ($cmd.Length -gt 160) { $cmd = $cmd.Substring(0,160) } } else { $cmd = '' }
+  $rows += ($_.ProcessId.ToString() + '|' + $_.Name + '|' + $cmd);
+}
+Write-Output $rows;
+    `.trim();
+    const encoded = Buffer.from(script, 'utf16le').toString('base64');
+    exec(`powershell -NoProfile -EncodedCommand ${encoded}`, (err, stdout, stderr) => {
+      const suspects = stdout.split(/\r?\n/).filter(Boolean).map(line => {
+        const [pid, name, ...rest] = line.split('|');
+        return { pid: parseInt(pid, 10) || 0, name: name || '', cmdline: rest.join('|') || '' };
+      });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, suspects }));
+    });
+    return;
+  }
+
   // API: Native Avrdude Hardware Flasher
-  if (req.method === 'POST' && req.url === '/api/flash-native-avrdude') {
+  if (req.method === 'POST' && qs === '/api/flash-native-avrdude') {
     let body = '';
     req.on('data', chunk => { body += chunk.toString(); });
     req.on('end', () => {
@@ -249,8 +275,8 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  let reqUrl = req.url === '/' ? '/index.html' : req.url;
-  let filePath = path.join(PUBLIC_DIR, reqUrl.split('?')[0]);
+  let reqUrl = qs === '/' ? '/index.html' : qs;
+  let filePath = path.join(PUBLIC_DIR, reqUrl);
 
   if (!filePath.startsWith(PUBLIC_DIR)) {
     res.writeHead(403, { 'Content-Type': 'text/plain' });
@@ -262,7 +288,7 @@ const server = http.createServer((req, res) => {
 
   fs.readFile(filePath, (err, data) => {
     if (err) {
-      if (err.code === 'ENOENT') {
+      if (err.code === 'ENOENT' || err.code === 'EISDIR') {
         fs.readFile(path.join(PUBLIC_DIR, 'index.html'), (indexErr, indexData) => {
           if (indexErr) {
             res.writeHead(500, { 'Content-Type': 'text/plain' });
