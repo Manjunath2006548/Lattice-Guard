@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![FPGA Target](https://img.shields.io/badge/FPGA-AMD%20Xilinx%20Artix--7-orange.svg)]()
 [![Verification](https://img.shields.io/badge/Verification-SystemVerilog%20SVA-teal.svg)]()
-[![Paper](https://img.shields.io/badge/IEEE-6--Page%20Publication%20PDF-red.svg)](Lattice_Guard_IEEE_Paper.pdf)
+[![Paper](https://img.shields.io/badge/IEEE-6--Page%20Publication-blue.svg)](#citation--reference)
 
 > **Lattice-Guard** is a sub-nanosecond asymmetric dual-core hardware monitoring architecture designed to detect and isolate multi-vector Hardware Trojans (HTs) with minimal silicon area overhead. By pairing a 16-bit high-precision Master Core with an 8-bit quantized approximation Shadow Core, Lattice-Guard achieves real-time anomaly detection with a **41.2% reduction in Look-Up Table (LUT) area utilization** and a **43.1% reduction in dynamic power dissipation** compared to conventional Dual Modular Redundancy (DMR).
 
@@ -59,8 +59,6 @@
 ```
 ├── index.html                  # Standalone Web Application UI (Code Studio, AI Inspector, Flasher, Oscilloscope)
 ├── server.js                   # Node.js HTTP Backend Server & Native AVRDUDE Hardware Flashing API
-├── Lattice_Guard_IEEE_Paper.tex# IEEE 6-Page Conference Research Paper LaTeX Source File
-├── Lattice_Guard_IEEE_Paper.pdf# Compiled 6-Page IEEE Conference Research Paper PDF
 ├── build_6page_pdf.js          # Automated Puppeteer script to compile the 6-Page IEEE PDF
 ├── clean_uno.hex               # Pre-compiled AVR Hex Binary for Clean Baseline Execution
 ├── trojan_uno.hex              # Pre-compiled AVR Hex Binary for Bit-Flip Trojan Execution
