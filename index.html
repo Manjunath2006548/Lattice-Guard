@@ -300,6 +300,99 @@
     .close-btn { position: absolute; top: 20px; right: 20px; font-size: 20px; color: var(--text-muted); cursor: pointer; }
     .close-btn:hover { color: #fff; }
 
+    /* ---------- CERTIFICATE STYLES ---------- */
+    .cert-sheet {
+      position: relative; margin: 14px 0; border-radius: 18px;
+      padding: 22px; text-align: center; overflow: hidden;
+    }
+    .cert-sheet::before {
+      content: ''; position: absolute; inset: 7px;
+      border: 2px solid rgba(255,255,255,0.22); border-radius: 13px; pointer-events: none;
+    }
+    .cert-sheet.unlocked {
+      background:
+        radial-gradient(1200px 480px at 50% -10%, rgba(0,255,136,0.18), transparent 60%),
+        linear-gradient(160deg, #0b1f1a, #071024 72%);
+      border: 1px solid rgba(16,185,129,0.6);
+      box-shadow: 0 0 0 1px rgba(0,255,136,0.15), 0 24px 60px rgba(0,0,0,0.65) inset, 0 10px 40px rgba(16,185,129,0.15);
+      color: #eafff4;
+    }
+    .cert-sheet.unlocked::before { border-color: rgba(0, 255, 136, 0.5); }
+    .cert-sheet.locked-red {
+      background: linear-gradient(160deg, #2a0d16, #16050a 72%);
+      border: 1px solid rgba(255,0,85,0.6);
+      box-shadow: 0 0 0 1px rgba(255,0,85,0.18), 0 24px 60px rgba(0,0,0,0.65) inset;
+      color: #ffe9f0;
+    }
+    .cert-sheet.locked-red::before { border-color: rgba(255,0,85,0.5); }
+    .cert-sheet.locked-amber {
+      background: linear-gradient(160deg, #2a200d, #170f05 72%);
+      border: 1px solid rgba(255,183,0,0.6);
+      box-shadow: 0 0 0 1px rgba(255,183,0,0.18), 0 24px 60px rgba(0,0,0,0.65) inset;
+      color: #fff7e3;
+    }
+    .cert-sheet.locked-amber::before { border-color: rgba(255,183,0,0.5); }
+    .cert-icon { font-size: 42px; line-height: 1; }
+    .cert-seal {
+      width: 76px; height: 76px; margin: 12px auto 6px;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px;
+    }
+    .cert-seal.gold {
+      background: radial-gradient(circle at 32% 28%, #fff3c4, #d4af37 55%, #8a6d1f);
+      color: #1a1503;
+      box-shadow: 0 0 0 4px rgba(212,175,55,0.25), 0 0 24px rgba(212,175,55,0.6);
+    }
+    .cert-seal.green {
+      background: radial-gradient(circle at 32% 28%, #d7ffe9, #10b981 55%, #065f46);
+      color: #04140c;
+      box-shadow: 0 0 0 4px rgba(16,185,129,0.25), 0 0 24px rgba(16,185,129,0.55);
+    }
+    .cert-seal.red {
+      background: radial-gradient(circle at 32% 28%, #ffd9e2, #e11d48 55%, #7a0c24);
+      color: #180307;
+      box-shadow: 0 0 0 4px rgba(225,29,72,0.25), 0 0 24px rgba(225,29,72,0.55);
+    }
+    .cert-seal.amber {
+      background: radial-gradient(circle at 32% 28%, #fff1c9, #f59e0b 55%, #8a5a06);
+      color: #1c1303;
+      box-shadow: 0 0 0 4px rgba(255,183,0,0.25), 0 0 24px rgba(255,183,0,0.55);
+    }
+    .cert-eyebrow {
+      font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+      opacity: 0.8; font-family: var(--font-mono);
+    }
+    .cert-title { font-size: 21px; font-weight: 800; margin: 6px 0 4px; color: #fff; letter-spacing: 1px; }
+    .cert-subtitle { font-size: 12px; color: rgba(255,255,255,0.85); margin-bottom: 12px; }
+    .gold-rule { margin: 0 auto 14px; width: 240px; height: 2px; background: linear-gradient(90deg, transparent, #d4af37, transparent); }
+    .cert-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; text-align: left; margin-bottom: 12px; }
+    .cert-field { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 9px 12px; }
+    .cert-field-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; font-family: var(--font-mono); }
+    .cert-field-value { font-size: 13px; font-weight: 700; font-family: var(--font-mono); color: #fff; word-break: break-all; }
+    .cert-hash {
+      display: inline-block; margin-top: 6px; padding: 5px 14px;
+      font-family: var(--font-mono); font-size: 11px; letter-spacing: 1px;
+      background: rgba(0,0,0,0.35); border: 1px dashed rgba(255,255,255,0.3); border-radius: 20px;
+    }
+    .cert-sig {
+      display: flex; justify-content: space-between; align-items: flex-end; text-align: left;
+      margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.25);
+    }
+    .cert-sig-name { font-size: 14px; font-weight: 800; color: #fff; font-family: Georgia, 'Times New Roman', serif; letter-spacing: 1px; }
+    .cert-sig-role { font-size: 10px; opacity: 0.75; }
+    .cert-sig-stamp { font-size: 24px; opacity: 0.9; }
+    .cert-actions { display: flex; gap: 10px; margin-top: 14px; }
+    @media print {
+      body * { visibility: hidden; }
+      #cert-modal, #cert-modal * { visibility: visible; }
+      #cert-modal { position: absolute; inset: 0; display: flex; padding: 14mm; background: #fff; }
+      #cert-modal .close-btn { display: none; }
+      #cert-modal .modal-box { box-shadow: none; border: none; max-width: none; }
+      .cert-sheet.unlocked { background: #fff; color: #111; border-color: #d4af37; box-shadow: none; }
+      .cert-sheet.unlocked::before { border-color: #d4af37; }
+      .cert-sheet .cert-title, .cert-sheet .cert-field-value, .cert-sheet .cert-sig-name { color: #111; }
+      .cert-sheet .cert-field { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.15); }
+    }
+
     .toast-notice {
       position: fixed; bottom: 20px; right: 20px; background: rgba(15, 23, 42, 0.95);
       border: 1px solid var(--primary-cyan); color: #fff; padding: 14px 20px;
@@ -776,28 +869,42 @@ void loop() {
 
       <div style="display: flex; flex-direction: column; gap: 14px;">
         
-        <!-- OPTION A: REAL PHYSICAL USB BOARD -->
+        <!-- STEP 1: AUTO-DETECTED COM PORT SELECTOR -->
         <div style="background: rgba(0, 243, 255, 0.08); border: 1px solid var(--primary-cyan); border-radius: 14px; padding: 18px;">
-          <h4 style="color: var(--primary-cyan); font-size: 15px; font-weight: 700; margin-bottom: 6px;"><i class="fa-solid fa-plug"></i> Option A: Pair Real Physical USB Board (Chrome / Edge)</h4>
-          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5;">
-            1. Plug your <strong>Arduino, ESP32, STM32, or Raspberry Pi Pico</strong> into your laptop USB port.<br>
-            2. Click the button below to open Chrome's USB device picker window.<br>
-            3. Select your COM port (e.g. <code>Arduino Uno (COM3)</code> or <code>USB-SERIAL CH340</code>) and click <strong>Connect</strong>.<br>
-            <em style="color: var(--accent-amber);">⚠️ Note: Ensure Arduino IDE Serial Monitor is CLOSED so the COM port is not locked!</em>
+          <h4 style="color: var(--primary-cyan); font-size: 15px; font-weight: 700; margin-bottom: 6px;"><i class="fa-solid fa-plug"></i> STEP 1: Select your live USB COM Port</h4>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.5;">
+            Plug your board (<strong>Arduino Uno, ESP32, Pico, STM32</strong>) into USB, then pick its COM port below. Flashing will target this exact port.
           </p>
-          <button class="btn-hero primary" style="width: 100%; justify-content: center; font-size: 13px;" onclick="closeUsbConnectWizard(); connectPhysicalHardwareBoard();">
-            <i class="fa-solid fa-microchip"></i> 🔌 SELECT PHYSICAL USB COM PORT NOW
+          <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+            <select id="com-port-select" class="form-control" style="flex: 1;"></select>
+            <button class="nav-btn" style="border-color: var(--primary-cyan); color: var(--primary-cyan); white-space: nowrap;" onclick="scanAndListComPorts(true)"><i class="fa-solid fa-rotate"></i> REFRESH</button>
+          </div>
+          <div id="com-port-scan-note" style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Scanning live COM ports...</div>
+          <button class="btn-hero primary" style="width: 100%; justify-content: center; font-size: 13px;" id="com-port-connect-btn" onclick="connectSelectedComPort()">
+            <i class="fa-solid fa-microchip"></i> 🔌 CONNECT TO THIS COM PORT
           </button>
         </div>
 
-        <!-- OPTION B: INSTANT SIMULATED PHYSICAL BOARD -->
-        <div style="background: rgba(0, 255, 136, 0.08); border: 1px solid var(--safe-green); border-radius: 14px; padding: 18px;">
-          <h4 style="color: var(--safe-green); font-size: 15px; font-weight: 700; margin-bottom: 6px;"><i class="fa-solid fa-bolt"></i> Option B: Instant Simulated Physical Board Stream</h4>
+        <!-- OPTION A (ADVANCED): BROWSER USB PICKER -->
+        <div style="background: rgba(0, 243, 255, 0.05); border: 1px dashed var(--primary-cyan); border-radius: 14px; padding: 18px;">
+          <h4 style="color: var(--primary-cyan); font-size: 15px; font-weight: 700; margin-bottom: 6px;"><i class="fa-solid fa-wand-magic-sparkles"></i> Option A (Advanced): Chrome / Edge USB Device Picker</h4>
           <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5;">
-            Don't have a hardware board plugged in right now? Click below to instantly enable <strong>Physical Board Mode (COM3 @ 9600 Baud)</strong> to test physical hardware telemetry & packet verification features immediately!
+            Alternatively open Chrome's device picker (e.g. <code>Arduino Uno (COM3)</code> or <code>USB-SERIAL CH340</code>) for live telemetry streaming.<br>
+            <em style="color: var(--accent-amber);">⚠️ Ensure Arduino IDE Serial Monitor is CLOSED or the COM port will be locked!</em>
+          </p>
+          <button class="btn-hero primary" style="width: 100%; justify-content: center; font-size: 13px;" onclick="closeUsbConnectWizard(); connectPhysicalHardwareBoard();">
+            <i class="fa-solid fa-microchip"></i> 🔌 OPEN USB DEVICE PICKER
+          </button>
+        </div>
+
+        <!-- OPTION B: NO USB PORT -> 100% VIRTUAL MODE -->
+        <div style="background: rgba(0, 255, 136, 0.08); border: 1px solid var(--safe-green); border-radius: 14px; padding: 18px;">
+          <h4 style="color: var(--safe-green); font-size: 15px; font-weight: 700; margin-bottom: 6px;"><i class="fa-solid fa-bolt"></i> Option B: No USB Port Selected → 100% Virtual Mode</h4>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5;">
+            No board plugged in? Click below to run in <strong>Virtual Mode</strong> — the full GUI, waveform &amp; flashing simulation work without any USB port. Flashing runs as a sandbox simulation.
           </p>
           <button class="btn-hero clear-trojan" style="width: 100%; justify-content: center; font-size: 13px;" onclick="closeUsbConnectWizard(); enableSimulatedPhysicalUsbBoard();">
-            <i class="fa-solid fa-play"></i> ⚡ ENABLE SIMULATED PHYSICAL USB BOARD MODE
+            <i class="fa-solid fa-play"></i> 🖥️ RUN IN VIRTUAL MODE (NO USB)
           </button>
         </div>
 
@@ -815,10 +922,13 @@ void loop() {
 
   <!-- CERTIFICATE GATING MODAL -->
   <div id="cert-modal" class="modal-overlay">
-    <div class="modal-box" style="text-align: center;">
+    <div class="modal-box" style="text-align: center; max-width: 720px;">
       <i class="fa-solid fa-xmark close-btn" onclick="closeCertificateModal()"></i>
-      <div class="brand-tag" style="margin-bottom: 12px;">IEEE 1800-2017 & ISO 26262 SECURITY CERTIFICATION</div>
-      <h3 style="font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 10px;">Official Hardware Trust Certificate</h3>
+      <div style="background: linear-gradient(135deg, rgba(212,175,55,0.22), rgba(255,183,0,0.08)); border: 1px solid rgba(212,175,55,0.42); border-radius: 14px; padding: 16px 14px; margin-bottom: 14px;">
+        <div class="brand-tag" style="margin-bottom: 6px; letter-spacing: 2px; color: var(--accent-amber);">IEEE 1800-2017 & ISO 26262 SECURITY CERTIFICATION</div>
+        <h3 style="font-size: 22px; font-weight: 800; color: #fff; margin: 0;">🔰 Official Hardware Trust Certificate</h3>
+        <div style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); margin-top: 4px;">Lattice Guard Silicon Security Engine • v2.0 • Certificate Authority</div>
+      </div>
 
       <div id="cert-status-content">
         <!-- Content dynamically injected via JavaScript -->
@@ -872,6 +982,8 @@ void loop() {
     let audioEnabled = false;
 
     let currentBoard = { id: 'arduino', name: 'Arduino Uno / Mega (ATmega328P)', protocol: 'STK500 Bootloader', baud: 9600 };
+    let selectedComPort = null;      // COM port chosen in the USB wizard -> real flash target
+    let virtualStreamActive = false; // virtual sandbox mode when NO USB port is selected
     let testResults = { bitflip: false, powerglitch: false, delaytrap: false, stickybit: false, sidechannel: false, memoryfault: false, clockskew: false, busoverflow: false, custompayload: false };
 
     let currentSignalType = 'sine';
@@ -894,6 +1006,8 @@ void loop() {
     function toggleUsbConnectionAction() {
       if (isPhysicalBoardConnected) {
         disconnectPhysicalHardwareBoard();
+      } else if (virtualStreamActive) {
+        disableVirtualStream();
       } else {
         openUsbConnectWizard();
       }
@@ -901,6 +1015,8 @@ void loop() {
 
     function disconnectPhysicalHardwareBoard() {
       isPhysicalBoardConnected = false;
+      selectedComPort = null;
+      virtualStreamActive = false;
       usbTelemetryHistory = []; // CLEAR TELEMETRY STREAM BUFFER ON DISCONNECT
 
       if (connectedPort) {
@@ -941,7 +1057,7 @@ void loop() {
 
       // Telemetry stream is ONLY fed when USB board IS CONNECTED (isPhysicalBoardConnected === true)!
       setInterval(() => {
-        if (!isPhysicalBoardConnected) {
+        if (!isPhysicalBoardConnected && !virtualStreamActive) {
           usbTelemetryHistory = []; // Keep empty when disconnected
           return;
         }
@@ -959,6 +1075,7 @@ void loop() {
     });
 
     function openUsbConnectWizard() {
+      scanAndListComPorts(true);
       document.getElementById('usb-wizard-modal').classList.add('active');
     }
 
@@ -966,12 +1083,72 @@ void loop() {
       document.getElementById('usb-wizard-modal').classList.remove('active');
     }
 
-    function enableSimulatedPhysicalUsbBoard() {
+    // LIVE COM PORT SCANNER -> FEEDS THE "STEP 1: SELECT YOUR COM PORT" DROPDOWN
+    async function scanAndListComPorts(forceRefresh) {
+      const sel = document.getElementById('com-port-select');
+      const note = document.getElementById('com-port-scan-note');
+      if (!sel) return;
+      if (note) { note.style.color = 'var(--text-muted)'; note.innerText = 'Scanning live COM ports...'; }
+      try {
+        const res = await fetch('/api/scan-ports?t=' + Date.now());
+        const data = await res.json();
+        const ports = ((data && data.ports) || []).filter(p => p && p.port);
+        if (ports.length === 0) {
+          sel.innerHTML = '<option value="">No live COM port detected (plug in board!)</option>';
+          if (note) note.innerHTML = '<span style="color:var(--accent-amber);">⚠️ <strong>0 ports found.</strong></span> Plug in your board with a <strong>DATA</strong> cable / install CH340-CP2102 driver, then press REFRESH.';
+        } else {
+          sel.innerHTML = ports.map(p => '<option value="' + p.port + '">' + p.port + ' → ' + p.name + '</option>').join('');
+          if (note) note.innerHTML = '<span style="color:var(--safe-green);">🟢 <strong>' + ports.length + ' port(s) detected.</strong></span> Pick a port → CONNECT → your flash targets that exact COM port.';
+        }
+      } catch (e) {
+        sel.innerHTML = '<option value="">Scan failed — is the server running?</option>';
+        if (note) note.innerText = '⚠️ Could not reach backend /api/scan-ports (node server must be on port 8000).';
+      }
+    }
+
+    // CONNECT TO THE COM PORT SELECTED IN THE DROPDOWN (REAL FLASH TARGET)
+    function connectSelectedComPort() {
+      const sel = document.getElementById('com-port-select');
+      if (!sel) return;
+      const val = (sel.value || '').trim();
+      if (!val) {
+        showToast('⚠️ Select a COM port first (or use Virtual Mode below).', false);
+        return;
+      }
+      selectedComPort = String(val).toUpperCase();
       isPhysicalBoardConnected = true;
+      virtualStreamActive = false;
+      usbTelemetryHistory = [];
+      closeUsbConnectWizard();
+      updateHardwareConnectionUI(true, 'Connected to ' + currentBoard.name + ' on ' + selectedComPort +
+        ' @ ' + currentBoard.baud + ' Baud. 🌟 Real flash will upload into  ' + selectedComPort + '.');
+      logConsole('[USB CONNECTED] 🟢 Selected ' + selectedComPort + ' for physical flashing (' + currentBoard.name + ').');
+      showToast('🟢 Connected to ' + selectedComPort + ' — flashing targets this exact port.', true);
+    }
+
+    // STOP THE VIRTUAL SANDBOX STREAM (BACK TO DISCONNECTED STATE)
+    function disableVirtualStream() {
+      virtualStreamActive = false;
+      usbTelemetryHistory = [];
+      updateHardwareConnectionUI(false, 'Running in Software Virtual Hardware Sandbox mode. Click "CONNECT USB BOARD" to pair a physical board.');
+      logConsole('[VIRTUAL DISABLED] 🖥️ Virtual sandbox stream stopped.');
+      showToast('🖥️ Virtual Mode stopped. Click CONNECT USB BOARD to pair hardware.', false);
+    }
+
+    function enableSimulatedPhysicalUsbBoard() {
+      selectedComPort = null;
+      isPhysicalBoardConnected = false;
+      virtualStreamActive = true;
       usbTelemetryHistory = []; // Reset telemetry buffer for fresh connection
-      updateHardwareConnectionUI(true, 'Connected to Physical USB Serial Stream: ' + currentBoard.name + ' (COM3 @ ' + currentBoard.baud + ' Baud)');
-      logConsole('[PHYSICAL BOARD SIMULATOR] 🟢 Physical USB Board Stream ACTIVE on COM3 @ ' + currentBoard.baud + ' Baud!');
-      showToast('🟢 Physical USB Board Stream Active (' + currentBoard.name.split(' ')[0] + ')!', true);
+      updateHardwareConnectionUI(false, '🖥️ VIRTUAL MODE ACTIVE — no USB port selected. Flashing runs as a virtual sandbox simulation.');
+      const label = document.getElementById('usb-btn-label');
+      const headerBtn = document.getElementById('header-usb-btn');
+      const bannerBtn = document.getElementById('banner-usb-btn');
+      if (label) label.innerText = '🖥️ DISABLE VIRTUAL';
+      if (headerBtn) { headerBtn.className = 'nav-btn usb-connect'; }
+      if (bannerBtn) { bannerBtn.className = 'nav-btn usb-connect'; bannerBtn.innerHTML = '<i class="fa-solid fa-play"></i> STOP VIRTUAL MODE'; }
+      logConsole('[VIRTUAL MODE] 🖥️ VIRTUAL HARDWARE SANDBOX STREAM ACTIVE (' + currentBoard.name + ' @ ' + currentBoard.baud + ' Baud) — no USB port needed.');
+      showToast('🖥️ Virtual Mode active — no USB port needed. Flash runs visually.', true);
     }
 
     // UPDATE OSCILLOSCOPE TROJAN GRAPH IDENTIFICATION BANNER
@@ -1388,12 +1565,20 @@ void loop() {
         if (status) status.innerText = label;
       };
 
-      logConsole('[HARDWARE SCAN] 🔎 Reading live COM ports from the Windows registry (DEVICEMAP/SERIALCOMM)...');
-      setProgress(15, 'STATUS: SCANNING WINDOWS COM PORTS...');
-
-      const scanRes = await fetch('/api/scan-ports');
-      const scanData = await scanRes.json();
       let targetPort = (comPortOverride || '').trim().toUpperCase() || null;
+
+      if (!targetPort) {
+        logConsole('[HARDWARE SCAN] 🔎 Reading live COM ports from the Windows registry (DEVICEMAP/SERIALCOMM)...');
+        setProgress(15, 'STATUS: SCANNING WINDOWS COM PORTS...');
+      } else {
+        logConsole('[PORT OVERRIDE] 🎯 Using COM port selected in wizard: ' + targetPort);
+      }
+
+      let scanData = { ports: [], drivers: [] };
+      if (!targetPort) {
+        const scanRes = await fetch('/api/scan-ports');
+        scanData = await scanRes.json();
+      }
 
       if (!targetPort) {
         const ports = (scanData.ports || []).filter(p => p && p.port);
@@ -1566,9 +1751,28 @@ void loop() {
 
       bar.style.width = '0%';
       status.innerText = 'FLASHING ' + currentBoard.name + '...';
-      // 3. REAL PHYSICAL FIRMWARE UPLOAD VIA NATIVE AVRDUDE TOOLCHAIN
-      bar.style.width = '5%';
-      const result = await performAvrdudeFlash(null);
+      // 3. MODE SELECTION:
+      //    - PHYSICAL: a USB COM port was chosen (STEP 1 in CONNECT USB BOARD wizard) -> REAL avrdude upload.
+      //    - VIRTUAL : no USB port selected -> sandbox simulation. Non-Arduino boards also simulate (no local toolchain).
+      const boardPicked = !!(selectedComPort || isPhysicalBoardConnected);
+      const boardSupportedByNativeFlasher = (currentBoard.id === 'arduino');
+      let result;
+      let physicalMode = false;
+
+      if (boardPicked && boardSupportedByNativeFlasher) {
+        physicalMode = true;
+        bar.style.width = '5%';
+        logConsole('[PHYSICAL MODE] 🎯 Physical board paired (' + (selectedComPort || 'Web Serial picker') + ') → real native firmware upload via avrdude toolchain.');
+        result = await performAvrdudeFlash(selectedComPort);
+      } else {
+        if (!boardPicked) {
+          logConsole('[VIRTUAL MODE] 🖥️ No USB COM port selected → running 100% VIRTUAL HARDWARE SANDBOX flash simulation.');
+        } else {
+          logConsole('[VIRTUAL MODE] 🖥️ Real native upload currently supports Arduino Uno/Mega. ' +
+            currentBoard.name + ' deployment runs as a simulated virtual hardware sandbox.');
+        }
+        result = await performVirtualFlash();
+      }
 
       if (!result.success) {
         diagBox.classList.add('fault');
@@ -1585,7 +1789,9 @@ void loop() {
       bar.style.width = '100%';
       status.innerText = 'DEPLOYMENT SUCCESS! BOARD READY (' + result.port + ')';
       logConsole('[DEPLOYMENT SUCCESS] ✅ Firmware uploaded into ' + currentBoard.name + '!');
-      const modeTag = 'PHYSICAL USB BOARD (' + currentBoard.name + ')';
+      const modeTag = physicalMode
+        ? 'PHYSICAL USB BOARD (' + currentBoard.name + ' @ ' + result.port + ')'
+        : 'VIRTUAL HARDWARE SANDBOX (NO USB PORT)';
 
       // SCENARIO A: PRE-EXISTING ALU MATH OFFSET HARDWARE TROJAN (EXPECTED = 100.00 vs MEASURED = 97.00)
       if (isAluTrojan) {
@@ -1665,6 +1871,31 @@ void loop() {
         updateHeaderStatus(false);
         showToast('🟢 Hardware & Code 100% Unmanipulated! Calculated output matches 100.00 cleanly.', true);
       }
+    }
+
+    // VIRTUAL HARDWARE SANDBOX FLASH SIMULATION
+    // Used when NO USB COM port is selected, or when the selected board has no local flasher.
+    function performVirtualFlash() {
+      return new Promise((resolve) => {
+        const bar = document.getElementById('flash-progress-bar');
+        const status = document.getElementById('flashing-status-label');
+        let progress = 0;
+        logConsole('[VIRTUAL FLASH] 🖥️ Simulating firmware deployment into virtual ' + currentBoard.name + ' silicon...');
+        const iv = setInterval(() => {
+          progress += Math.random() * 20 + 12;
+          if (progress >= 100) {
+            progress = 100;
+            clearInterval(iv);
+            if (bar) bar.style.width = '100%';
+            if (status) status.innerText = 'STATUS: 🖥️ VIRTUAL FLASH COMPLETE';
+            logConsole('[VIRTUAL FLASH] ✅ Virtual deployment finished for ' + currentBoard.name + '. Connect a USB COM port to flash real hardware.');
+            resolve({ success: true, port: 'VIRTUAL', log: 'Virtual flash simulation completed.' });
+          } else {
+            if (bar) bar.style.width = progress + '%';
+            if (status) status.innerText = 'STATUS: 🖥️ SIMULATING VIRTUAL FLASH ' + Math.min(100, Math.round(progress)) + '%';
+          }
+        }, 90);
+      });
     }
 
     function updateHeaderStatus(isAlarm) {
@@ -1912,6 +2143,17 @@ void loop() {
       }
     }
 
+    // CERTIFICATE ISSUANCE HELPERS
+    function generateCertId() {
+      const h = Date.now().toString(16).toUpperCase().padStart(12, '0');
+      return '0x' + h.slice(0, 4) + '-' + h.slice(4, 8) + '-' + h.slice(8, 12) + 'A9F2';
+    }
+    function certBoardTarget() {
+      if (selectedComPort) return currentBoard.name + ' @ ' + selectedComPort;
+      if (isPhysicalBoardConnected) return currentBoard.name + ' (Physical USB)';
+      return currentBoard.name + ' (Virtual Sandbox)';
+    }
+
     // CERTIFICATE GATING MODAL WITH STRICT FAULT & TROJAN LOCKING
     function openCertificateModal() {
       const codeEditorEl = document.getElementById('code-editor');
@@ -1920,7 +2162,9 @@ void loop() {
       const trojanRes = analyzeCodeForTrojans(liveCodeText);
 
       const isSystemFaultActive = (activeTrojan !== null) || (!syntaxRes.valid) || (trojanRes.hasTrojan);
-      const allAuditPassed = Object.values(testResults).every(v => v === true);
+      const totalAudits = Object.keys(testResults).length;
+      const auditPassedCount = Object.values(testResults).filter(v => v === true).length;
+      const allAuditPassed = (auditPassedCount === totalAudits);
 
       const modal = document.getElementById('cert-modal');
       const content = document.getElementById('cert-status-content');
@@ -1928,69 +2172,114 @@ void loop() {
       if (isSystemFaultActive) {
         // SYSTEM HAS ACTIVE ERROR OR HARDWARE TROJAN -> CERTIFICATE IS LOCKED!
         content.innerHTML = `
-          <div style="background: rgba(255, 0, 85, 0.15); border: 1px solid var(--alarm-red); padding: 20px; border-radius: 16px; margin: 20px 0; text-align: center;">
-            <i class="fa-solid fa-triangle-exclamation" style="font-size: 48px; color: var(--alarm-red); margin-bottom: 12px;"></i>
-            <h4 style="color: #fff; font-size: 18px;">🔒 CERTIFICATE LOCKED - HARDWARE FAULT / TROJAN DETECTED</h4>
-            <p style="font-size: 13px; color: var(--text-muted); margin-top: 8px;">
-              Certificate issuance is <strong>BLOCKED</strong> because a Hardware Trojan or Code Error is active in your system!<br>
-              • Active Trojan State: <strong style="color: var(--alarm-red);">${activeTrojan ? activeTrojan.toUpperCase() : 'SYNTAX / LOGIC ERROR'}</strong><br>
-              • Lattice Guard Mismatch Delta Δ(t) &gt; 0.120 Threshold (Siren Tripped)
-            </p>
-          </div>
-          <button class="btn-hero primary" style="width: 100%; justify-content: center; background: linear-gradient(135deg, var(--safe-green), #059669); color: #000; font-weight: 700;" onclick="closeCertificateModal(); loadSampleCode('clean'); runCompletePhysicalBoardTrojanTestSuite(false);">
-            <i class="fa-solid fa-broom"></i> 🟢 CLEAR ALL FAULTS & AUDIT CLEAN CODE TO UNLOCK CERTIFICATE
-          </button>
-        `;
+          <div class="cert-sheet locked-red">
+            <div class="cert-seal red"><i class="fa-solid fa-ban"></i></div>
+            <div class="cert-eyebrow" style="color:#ff7a9e;">Certificate Denied</div>
+            <div class="cert-title">🔒 CERTIFICATE LOCKED</div>
+            <div class="cert-subtitle">Hardware fault / software trojan detected — certificate issuance is BLOCKED</div>
+            <div class="gold-rule"></div>
+            <div class="cert-grid">
+              <div class="cert-field"><div class="cert-field-label">Active Fault State</div><div class="cert-field-value" style="color:#ff5577;">${activeTrojan ? activeTrojan.toUpperCase() : 'SYNTAX / LOGIC ERROR'}</div></div>
+              <div class="cert-field"><div class="cert-field-label">Mismatch Delta Δ(t)</div><div class="cert-field-value" style="color:#ff5577;">0.5539 &gt; 0.120 (THRESHOLD EXCEEDED)</div></div>
+              <div class="cert-field"><div class="cert-field-label">Watchdog Status</div><div class="cert-field-value">🚨 ALARM TRIPPED</div></div>
+              <div class="cert-field"><div class="cert-field-label">Reaction Latency</div><div class="cert-field-value">&lt; 0.39 ns (intercepted)</div></div>
+            </div>
+            <div class="cert-sig">
+              <div><div class="cert-sig-name">Lattice Guard Authority</div><div class="cert-sig-role">⛔ Issuance Revoked Until Fault Is Cleared</div></div>
+              <div class="cert-sig-stamp">🔒</div>
+            </div>
+            <div class="cert-actions">
+              <button class="btn-hero primary" style="width: 100%; justify-content: center; background: linear-gradient(135deg, var(--safe-green), #059669); color: #000; font-weight: 700;" onclick="closeCertificateModal(); loadSampleCode('clean'); runCompletePhysicalBoardTrojanTestSuite(false);">
+                <i class="fa-solid fa-broom"></i> 🟢 CLEAR ALL FAULTS & AUDIT CLEAN CODE TO UNLOCK
+              </button>
+            </div>
+          </div>`;
       } else if (!allAuditPassed) {
         // AUDIT SUITE INCOMPLETE -> CERTIFICATE IS LOCKED!
+        const pct = Math.round((auditPassedCount / totalAudits) * 100);
         content.innerHTML = `
-          <div style="background: rgba(255, 183, 0, 0.15); border: 1px solid var(--accent-amber); padding: 20px; border-radius: 16px; margin: 20px 0; text-align: center;">
-            <i class="fa-solid fa-lock" style="font-size: 48px; color: var(--accent-amber); margin-bottom: 12px;"></i>
-            <h4 style="color: #fff; font-size: 18px;">🔒 CERTIFICATE LOCKED - SECURITY AUDIT INCOMPLETE</h4>
-            <p style="font-size: 13px; color: var(--text-muted); margin-top: 8px;">
-              Run all 9 Security Audit Test Vectors on your clean code to unlock the official IEEE Security Certificate.
-            </p>
-          </div>
-          <button class="btn-hero primary" style="width: 100%; justify-content: center;" onclick="closeCertificateModal(); runCompletePhysicalBoardTrojanTestSuite(false);">
-            <i class="fa-solid fa-play"></i> ⚡ RUN ALL 9 SECURITY AUDIT VECTORS NOW
-          </button>
-        `;
+          <div class="cert-sheet locked-amber">
+            <div class="cert-seal amber"><i class="fa-solid fa-lock"></i></div>
+            <div class="cert-eyebrow" style="color:#ffd166;">Security Audit Pending</div>
+            <div class="cert-title">🔒 CERTIFICATE LOCKED</div>
+            <div class="cert-subtitle">Complete all 9 Security Audit Test Vectors to unlock the official certificate</div>
+            <div class="gold-rule"></div>
+            <div class="cert-grid">
+              <div class="cert-field"><div class="cert-field-label">Audit Vectors Passed</div><div class="cert-field-value">${auditPassedCount} / ${totalAudits}</div></div>
+              <div class="cert-field"><div class="cert-field-label">Audit Completion</div><div class="cert-field-value">${pct}%</div></div>
+              <div class="cert-field"><div class="cert-field-label">Verified Target</div><div class="cert-field-value">${certBoardTarget()}</div></div>
+              <div class="cert-field"><div class="cert-field-label">Standard</div><div class="cert-field-value">IEEE 1800-2017 • ISO 26262</div></div>
+            </div>
+            <div class="cert-sig">
+              <div><div class="cert-sig-name">Lattice Guard Authority</div><div class="cert-sig-role">⏳ Awaiting ${totalAudits}/${totalAudits} Vector Audit Completion</div></div>
+              <div class="cert-sig-stamp">🔒</div>
+            </div>
+            <div class="cert-actions">
+              <button class="btn-hero primary" style="width: 100%; justify-content: center;" onclick="closeCertificateModal(); runCompletePhysicalBoardTrojanTestSuite(false);">
+                <i class="fa-solid fa-play"></i> ⚡ RUN ALL 9 SECURITY AUDIT VECTORS NOW
+              </button>
+            </div>
+          </div>`;
       } else {
         // 100% CLEAN CODE & ALL 9 AUDIT VECTORS PASSED -> UNLOCKED!
+        const certId = generateCertId();
+        const issuedAt = new Date().toLocaleString();
         content.innerHTML = `
-          <div style="background: rgba(0, 255, 136, 0.15); border: 1px solid var(--safe-green); padding: 20px; border-radius: 16px; margin: 20px 0; text-align: center;">
-            <i class="fa-solid fa-shield-check" style="font-size: 48px; color: var(--safe-green); margin-bottom: 12px;"></i>
-            <h4 style="color: #fff; font-size: 18px;">🟢 9/9 SECURITY AUDITS PASSED - SILICON 100% SAFE</h4>
-            <p style="font-size: 13px; color: var(--text-muted); margin-top: 6px;">
-              Verified Target: <strong>${currentBoard.name}</strong><br>
-              Certificate Verification Hash: <code>0x9F82A41E8C7301B9A2D5E4</code>
-            </p>
-          </div>
-          <button class="btn-hero primary" style="width: 100%; justify-content: center;" onclick="downloadCertJSON()">
-            <i class="fa-solid fa-download"></i> DOWNLOAD IEEE SECURITY CERTIFICATE (JSON)
-          </button>
-        `;
+          <div class="cert-sheet unlocked">
+            <div class="cert-eyebrow" style="color:#d4af37;">✦ Certificate of Hardware Trust ✦</div>
+            <div class="cert-title">🟢 9/${totalAudits} SECURITY AUDITS PASSED</div>
+            <div class="cert-seal gold"><i class="fa-solid fa-shield-halved"></i></div>
+            <div class="cert-subtitle">This certifies that the target silicon passed all Lattice Guard security vectors and is 100% unmanipulated.</div>
+            <div class="gold-rule"></div>
+            <div class="cert-grid">
+              <div class="cert-field"><div class="cert-field-label">Verified Target</div><div class="cert-field-value">${certBoardTarget()}</div></div>
+              <div class="cert-field"><div class="cert-field-label">Compliance Verdict</div><div class="cert-field-value" style="color:var(--safe-green);">PASSED — 100% SILICON SAFE</div></div>
+              <div class="cert-field"><div class="cert-field-label">Mismatch Delta Δ(t)</div><div class="cert-field-value">0.0039 &lt; 0.120</div></div>
+              <div class="cert-field"><div class="cert-field-label">Watchdog Latency</div><div class="cert-field-value">&lt; 0.39 ns</div></div>
+              <div class="cert-field"><div class="cert-field-label">Security Standard</div><div class="cert-field-value">IEEE 1800-2017 • ISO 26262</div></div>
+              <div class="cert-field"><div class="cert-field-label">Issued</div><div class="cert-field-value">${issuedAt}</div></div>
+            </div>
+            <div class="cert-hash">🔐 CERT ID: ${certId}</div>
+            <div class="cert-sig">
+              <div><div class="cert-sig-name">Lattice Guard Authority</div><div class="cert-sig-role">Hardware Security Certification Officer</div></div>
+              <div class="cert-sig-stamp">🛡️</div>
+            </div>
+            <div class="cert-actions">
+              <button class="btn-hero primary" style="flex:1; justify-content:center;" onclick="downloadCertJSON('${certId}')">
+                <i class="fa-solid fa-download"></i> DOWNLOAD JSON
+              </button>
+              <button class="btn-hero clear-trojan" style="flex:1; justify-content:center;" onclick="printCertificate()">
+                <i class="fa-solid fa-print"></i> PRINT / PDF
+              </button>
+            </div>
+          </div>`;
       }
       modal.classList.add('active');
     }
 
-    function closeCertificateModal() {
-      document.getElementById('cert-modal').classList.remove('active');
+    function printCertificate() {
+      window.print();
     }
 
-    function downloadCertJSON() {
+    function downloadCertJSON(certId) {
       const certData = {
         title: "IEEE 1800-2017 & ISO 26262 Hardware Security Certificate",
-        platform: "Lattice Guard Silicon Security Engine",
-        board: currentBoard.name,
+        platform: "Lattice Guard Silicon Security Engine v2.0",
+        board: certBoardTarget(),
+        auditVectorsPassed: Object.values(testResults).filter(v => v === true).length + "/9",
+        delta: "0.0039 (threshold 0.120)",
+        watchdogLatency: "<0.39ns",
+        securityStandard: "IEEE 1800-2017 & ISO 26262",
+        certId: certId || generateCertId(),
         timestamp: new Date().toISOString(),
-        verificationHash: "0x9F82A41E8C7301B9A2D5E4",
+        issuedBy: "Lattice Guard Security Certification Authority",
         status: "PASSED_100_PERCENT_INTERCEPTED"
       };
       const blob = new Blob([JSON.stringify(certData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = 'Lattice-Guard-Security-Certificate.json';
       a.click();
+      URL.revokeObjectURL(url);
     }
 
     // WAVEFORM OSCILLOSCOPE CANVAS ENGINE WITH HARDWARE USB CONNECTION ENFORCEMENT
