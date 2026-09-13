@@ -86,6 +86,34 @@ ConvertTo-Json -Compress -InputObject @{ ports = @($ports | Sort-Object port); d
   });
 }
 
+// Tries to briefly open+close a COM port. If another program (Arduino IDE
+// Serial Monitor/Plotter or this app's browser Web Serial handle) is holding
+// the port, Windows responds with "Access is denied" -> port is locked.
+function isPortLocked(targetPort, callback) {
+  const script = `
+$ErrorActionPreference = 'SilentlyContinue';
+try {
+  $sp = New-Object System.IO.Ports.SerialPort('${targetPort}', 115200);
+  $sp.ReadTimeout = 300;
+  $sp.Open();
+  $sp.Close();
+  Write-Output 'OK';
+} catch {
+  Write-Output ('LOCKED|' + $_.Exception.Message);
+}
+  `.trim();
+  const encoded = Buffer.from(script, 'utf16le').toString('base64');
+  exec(`powershell -NoProfile -EncodedCommand ${encoded}`, (err, stdout, stderr) => {
+    if (err || !stdout.trim()) {
+      return callback({ locked: false, detail: 'Could not run port probe.' });
+    }
+    const out = stdout.trim();
+    callback(stdout.trim().startsWith('LOCKED')
+      ? { locked: true, detail: out.split('|').slice(1).join('|') }
+      : { locked: false, detail: out });
+  });
+}
+
 const server = http.createServer((req, res) => {
   // API: Scan active connected USB COM ports
   if (req.method === 'GET' && req.url === '/api/scan-ports') {
@@ -168,8 +196,22 @@ const server = http.createServer((req, res) => {
         };
 
         // If comPort was specified, use it directly. Otherwise scan for active port.
+        const doFlashWithLockCheck = (targetPort) => {
+          isPortLocked(targetPort, (lock) => {
+            if (lock.locked) {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              return res.end(JSON.stringify({
+                success: false,
+                port: targetPort,
+                error: `🔒 ${targetPort} is HELD OPEN by another program — avrdude cannot access it (Access is denied).\n\nWho is locking it?\n1. 🖥️ THIS APP: the "Connect Board" / Web Serial connection in the browser holds the port.\n   → Click DISCONNECT in the app (or just close & reopen the tab).\n2. 📈 Arduino IDE → Serial Monitor or Serial Plotter window (set to ${targetPort}).\n   → Close that window.\n3. 🔌 Another serial tool (PuTTY, Tera Term, CoolTerm...).\n   → Close it.\n\n✅ AFTER closing them, click FLASH again.\n\nRaw detail: ${lock.detail}`
+              }));
+            }
+            doFlash(targetPort);
+          });
+        };
+
         if (comPort && comPort !== 'AUTO') {
-          doFlash(comPort);
+          doFlashWithLockCheck(comPort);
         } else {
           scanConnectedUsbPorts(result => {
             const ports = result.ports || [];
@@ -187,7 +229,7 @@ const server = http.createServer((req, res) => {
               }));
             }
             if (ports.length === 1) {
-              return doFlash(ports[0].port);
+              return doFlashWithLockCheck(ports[0].port);
             }
             const options = ports.map(p => `${p.port} (${p.name})`).join(' or ');
             res.writeHead(409, { 'Content-Type': 'application/json' });

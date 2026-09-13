@@ -1427,6 +1427,18 @@ void loop() {
       logConsole('[AVRDUDE FLASH] 🚀 Invoking native avrdude.exe on ' + targetPort + ' (firmware: ' + hexType + '_uno.hex)...');
       setProgress(50, 'STATUS: FLASHING ' + targetPort + ' VIA NATIVE AVRDUDE...');
 
+      // Release the browser's Web Serial handle first — avrdude cannot open a
+      // port that the browser is still holding ("Access is denied").
+      if (isPhysicalBoardConnected && connectedPort) {
+        logConsole('[WEB SERIAL RELEASE] Closing browser Web Serial port so avrdude.exe can access ' + targetPort + '...');
+        try { await connectedPort.close(); } catch (e) { logConsole('[WEB SERIAL RELEASE] ' + e.message); }
+        isPhysicalBoardConnected = false;
+        connectedPort = null;
+        if (typeof updateHardwareConnectionUI === 'function') {
+          updateHardwareConnectionUI(false, 'Web Serial released for native firmware upload.');
+        }
+      }
+
       try {
         const response = await fetch('/api/flash-native-avrdude', {
           method: 'POST',
